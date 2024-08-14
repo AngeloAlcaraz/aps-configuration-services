@@ -1,0 +1,14 @@
+﻿global using Aps.Configuration.Application.Common;
+global using Aps.Configuration.Application.Constants;
+global using Aps.Configuration.Application.Dtos;
+global using Aps.Configuration.Application.Filters.AccountsFilters;
+global using Aps.Configuration.Application.Helpers;
+global using Aps.Configuration.Application.Services.AccountsService.Queries;
+global using Aps.Configuration.Core.Domain;
+global using Aps.Configuration.Core.Interfaces;
+global using FluentValidation;
+global using MediatR;
+global using Microsoft.Extensions.Logging;
+global using MongoDB.Driver;
+global using System.Reflection;
+global using System.Text.Json;
