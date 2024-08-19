@@ -4,35 +4,24 @@ public static class ConfigureServices
 {
     public static IServiceCollection RegisterServices(this IServiceCollection services, IConfiguration configuration)
     {
+        var vaultUri = configuration["VaultSettings:Uri"];
+        var vaultClient = new SecretClient(new Uri(vaultUri), new DefaultAzureCredential());
+
+        var connectionStringSecretName = configuration["MongoDbSettings:ConnectionStringSecretName"];
+        var databaseSecretName = configuration["MongoDbSettings:DatabaseSecretName"];
+
+        string connectionString = vaultClient.GetSecret(connectionStringSecretName).Value.Value.ToString();
+        var databaseName = vaultClient.GetSecret(databaseSecretName).Value.Value;
+
         services.Configure<MongoDbSettings>(configuration.GetSection("MongoDbSettings"));
 
         services.AddSingleton<IMongoClient>(s =>
         {
             var settings = s.GetRequiredService<IOptions<MongoDbSettings>>().Value;
-            var connectionString = Environment.GetEnvironmentVariable(settings.ConnectionStringSecretName);
 
-            if (string.IsNullOrEmpty(connectionString))
-                throw new InvalidOperationException($"Environment variable '{settings.ConnectionStringSecretName}' is missing or empty.");
-
-            X509Certificate2 certificate;
-            try
-            {
-                certificate = new X509Certificate2(settings.Certificate.PathSecretName);
-            }
-            catch (CryptographicException ex)
-            {
-                throw new InvalidOperationException("Failed to load the certificate", ex);
-            }
-
-            var clientSettings = MongoClientSettings.FromConnectionString(connectionString);
-
+            var clientSettings = MongoClientSettings.FromUrl(new MongoUrl(connectionString));
             clientSettings.UseTls = true;
-            clientSettings.SslSettings = new SslSettings
-            {
-                ClientCertificates = new[] { certificate },
-                CheckCertificateRevocation = false
-            };
-            clientSettings.ServerApi = new ServerApi(ServerApiVersion.V1);
+            clientSettings.SslSettings = new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
             clientSettings.ConnectTimeout = TimeSpan.FromSeconds(settings.Timeouts.ConnectionTimeoutSeconds);
             clientSettings.SocketTimeout = TimeSpan.FromSeconds(settings.Timeouts.SocketTimeoutSeconds);
 
@@ -41,13 +30,10 @@ public static class ConfigureServices
 
         services.AddScoped<IMongoDatabase>(s =>
         {
-            var settings = s.GetRequiredService<IOptions<MongoDbSettings>>().Value;
             var client = s.GetRequiredService<IMongoClient>();
 
-            var databaseName = Environment.GetEnvironmentVariable(settings.DatabaseSecretName);
-
             if (string.IsNullOrEmpty(databaseName))
-                throw new InvalidOperationException($"Environment variable '{settings.DatabaseSecretName}' is missing or empty.");
+                throw new InvalidOperationException($"Environment variable '{databaseName}' is missing or empty.");
 
             return client.GetDatabase(databaseName);
         });
