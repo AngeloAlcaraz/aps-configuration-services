@@ -11,7 +11,6 @@ builder.Services.AddValidatorsFromAssemblyContaining<AccountsRequestDtoValidator
 
 builder.Services.RegisterServices(builder.Configuration);
 
-//builder.Configuration.AddJsonFile("appsettings.json");
 var swaggerSettings = builder.Configuration.GetSection("SwaggerSettings");
 var termsOfServiceUrl = swaggerSettings.GetValue<string>("TermsOfServiceUrl");
 
